@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+
+  app:
+    build:
+      context: .
+    environment:
+      JDBC_URL: jdbc:postgresql://app-db.default.svc.cluster.local:5432/app
+      DB_USER: postgres
+      DB_PASS: example
+    networks:
+      default:
+        aliases:
+          - app.default.svc.cluster.local # Kube DNS format
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - dbmigration
+
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: app
+    networks:
+      default:
+        aliases:
+          - app-db.default.svc.cluster.local # Kube DNS format
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5432"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  dbmigration:
+    image: flyway/flyway
+    command: -url=jdbc:postgresql://app-db.default.svc.cluster.local:5432/app -user=postgres -password=example -connectRetries=60 migrate
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+    depends_on:
+      - db

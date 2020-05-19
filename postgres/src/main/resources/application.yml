@@ -1,0 +1,38 @@
+# Logging
+# logging.config: classpath:logback-prod.xml
+
+spring:
+  datasource:
+    url: ${JDBC_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    hikari:
+      initializationFailTimeout: 30 # To allow for delayed DB resources
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+
+# Actuator
+management:
+  endpoint:
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  endpoints:
+    web:
+      exposure.include: "info,health,prometheus"
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+---
+spring.profiles: dev
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:test
+    username: sa
+    password: ""

@@ -56,6 +56,8 @@ subprojects {
         }
     }
 
+
+
     // Apply Spring Boot configurations
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'org.springframework.boot'
@@ -71,6 +73,23 @@ subprojects {
         runtimeClasspath {
             extendsFrom developmentOnly
         }
+    }
+
+    // Adds: ./gradlew bootRunDev
+    task bootRunDev {
+      bootRun.configure {
+        jvmArgs = ["-Dspring.profiles.active=dev", "-Dspring.output.ansi.enabled=ALWAYS"]
+      }
+
+      // Enable H2 to be used as a normal dependency
+      dependencies {
+        runtimeOnly 'com.h2database:h2'
+      }
+    }
+    bootRunDev.finalizedBy bootRun
+
+    bootJar {
+      archiveFileName = "app.jar"
     }
 
     // Example of shared dependencies for specific services. Can also exist in their own build.gradle
