@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "Running formatting pre-commit hook"
+./gradlew spotlessApply
+./gradlew test

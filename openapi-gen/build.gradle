@@ -1,0 +1,61 @@
+plugins {
+    id 'org.openapi.generator' version '4.3.0'
+}
+
+apply plugin: 'org.openapi.generator'
+
+version = '0.0.1-SNAPSHOT'
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // OpenAPI dependencies
+    implementation 'io.springfox:springfox-swagger2:2.9.2'
+    implementation 'io.springfox:springfox-swagger-ui:2.9.2'
+    implementation 'org.openapitools:jackson-databind-nullable:0.1.0'
+}
+
+task validateSpecs(dependsOn: ['validatePetSchema'])
+
+// aggregate task for generating all APIs
+task genApis {
+    finalizedBy 'spotlessApply' // Ensure generated classes are properly formatted
+}
+
+// Create a API Generation task for each YAML file
+fileTree(dir: "apis/", include: '**/*.yml').each {
+    println "processing ${it.name}"
+    def apiName = it.getName().replace('.yml', '')
+    def taskName = 'openApiGenerate' + apiName.capitalize()
+
+    tasks.create(taskName, org.openapitools.generator.gradle.plugin.tasks.GenerateTask.class, {
+        generatorName = 'spring'
+        inputSpec = "apis/" + "${apiName}.yml"
+        outputDir = "$projectDir/" // Generates in the project's src/main/java folder directly
+        templateDir = "generator-templates" // Customizations to spring generator
+        apiPackage = "io.medgelabs.api.${apiName}"
+        modelPackage = "io.medgelabs.api.${apiName}"
+        generateAliasAsModel = false
+        configOptions =[
+            hideGenerationTimestamp: 'true', // remove @Generated annotations
+            additionalModelTypeAnnotations: '@lombok.Data',
+            java8: 'true',
+            dateLibrary: 'java8',
+            useBeanValidation: 'false',
+        ]
+        // Only generates apis and models. Everything else is omitted
+        systemProperties =[
+            apis: '',
+            models: '',
+        ]
+    })
+
+    tasks.genApis.dependsOn taskName
+}
+
+compileJava.dependsOn tasks.genApis
+
+// task validatePetSchema(type: org.openapitools.generator.gradle.plugin.tasks.ValidateTask) {
+openApiValidate { // TODO why do we have to have one of these?
+    inputSpec = "apis/pet.yml"
+}

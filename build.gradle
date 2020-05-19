@@ -1,0 +1,99 @@
+plugins {
+    id 'io.freefair.lombok' version '5.0.0'
+    id 'org.springframework.boot' version '2.2.6.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+    id 'com.diffplug.gradle.spotless' version '3.28.1'
+    id 'com.github.spotbugs' version '4.0.7'
+    id 'java'
+}
+
+allprojects {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+}
+
+// Shared configuration for all subprojects
+subprojects {
+    group = 'io.medgelabs'
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+
+    apply plugin: 'java'
+    apply plugin: 'com.diffplug.gradle.spotless'
+    apply plugin: 'com.github.spotbugs'
+    apply plugin: 'io.freefair.lombok'
+
+    spotbugs {
+        ignoreFailures = false
+        reportsDir = file("$buildDir/reports/spotbugs")
+        effort = 'default'
+    }
+    spotbugsMain {
+        reports {
+            xml.enabled false
+            html {
+                enabled true
+                destination = file("$buildDir/reports/spotbugs/main/spotbugs.html")
+            }
+        }
+    }
+
+    // code formatting
+    compileJava.finalizedBy 'spotlessApply'
+    spotless {
+        format 'misc', {
+            target '**/*.gradle', '**/*.md', '**/.gitignore', '**/application*.yml'
+
+            trimTrailingWhitespace()
+            indentWithSpaces(2)
+            endWithNewline()
+        }
+
+        java {
+            googleJavaFormat()
+        }
+    }
+
+    // Apply Spring Boot configurations
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'org.springframework.boot'
+
+    // If running on unix - this prepends a shell script to the jar so that you can run it with ./my.jar
+    bootJar {
+        launchScript()
+    }
+
+    // Configuration for dependencies (like dev-tools) only available in Spring Boot Dev Mode
+    configurations {
+        developmentOnly
+        runtimeClasspath {
+            extendsFrom developmentOnly
+        }
+    }
+
+    // Example of shared dependencies for specific services. Can also exist in their own build.gradle
+    // if they are hyper-specific to that module
+    dependencies {
+        developmentOnly 'org.springframework.boot:spring-boot-devtools'
+        implementation "jakarta.xml.bind:jakarta.xml.bind-api:2.3.2"
+        implementation "org.glassfish.jaxb:jaxb-runtime:2.3.2"
+
+        testImplementation('org.springframework.boot:spring-boot-starter-test') {
+            exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+        }
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}
+
+// Auto-install required git hooks
+task installGitHook(type: Copy) {
+    from new File(rootProject.rootDir, 'hooks')
+    into { new File(rootProject.rootDir, '.git/hooks') }
+    fileMode 0777
+}
+compileJava.dependsOn installGitHook
