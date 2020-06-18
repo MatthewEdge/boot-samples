@@ -2,3 +2,4 @@ rootProject.name = 'boot-samples'
 
 include 'openapi-gen'
 include 'postgres'
+include 'aws-sqs'
